@@ -1,0 +1,17 @@
+.vs/
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+/DXR/x64/Debug
+/x64/Debug
