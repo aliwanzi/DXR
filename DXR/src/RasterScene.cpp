@@ -30,15 +30,9 @@ RasterScene::RasterScene(ConfigInfo& config)
 	D3DResources::Create_Index_Buffer(d3d, resources, model);
 
 	// Create Raster specific resources
+	Raster::Resize(d3d, raster);
 	Raster::Create_Raster_Program(d3d, raster);
 	Raster::Create_Pipeline_State(d3d, raster);
-	Raster::Resize(d3d, raster);
-
-	d3d.cmdList->Close();
-	ID3D12CommandList* pGraphicsList = { d3d.cmdList };
-	d3d.cmdQueue->ExecuteCommandLists(1, &pGraphicsList);
-	D3D12::WaitForGPU(d3d);
-	D3D12::Reset_CommandList(d3d);
 }
 
 RasterScene::~RasterScene()
@@ -52,11 +46,11 @@ void RasterScene::Update()
 
 void RasterScene::Render()
 {
+	D3D12::Reset_CommandList(d3d);
 	Raster::Build_Command_List(d3d, raster, resources);
 	D3D12::Submit_CmdList(d3d);
 	D3D12::Present(d3d);
 	D3D12::MoveToNextFrame(d3d);
-	D3D12::Reset_CommandList(d3d);
 }
 
 void RasterScene::CleanUp()

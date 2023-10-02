@@ -171,26 +171,63 @@ namespace D3DResources
 	*/
 	void Create_Vertex_Buffer(D3D12Global& d3d, D3D12Resources& resources, Model& model)
 	{
-		// Create the vertex buffer resource
-		D3D12BufferCreateInfo info(((UINT)model.vertices.size() * sizeof(Vertex)), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-		Create_Buffer(d3d, info, &resources.vertexBuffer);
-#if NAME_D3D_RESOURCES
-		resources.vertexBuffer->SetName(L"Vertex Buffer");
-#endif
+//		// Create the vertex buffer resource
+//		D3D12BufferCreateInfo info(((UINT)model.vertices.size() * sizeof(Vertex)), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+//		Create_Buffer(d3d, info, &resources.vertexBuffer);
+//#if NAME_D3D_RESOURCES
+//		resources.vertexBuffer->SetName(L"Vertex Buffer");
+//#endif
 
-		// Copy the vertex data to the vertex buffer
-		UINT8* pVertexDataBegin;
-		D3D12_RANGE readRange = {};
-		HRESULT hr = resources.vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin));
-		Utils::Validate(hr, L"Error: failed to map vertex buffer!");
+		//// Copy the vertex data to the vertex buffer
+		//UINT8* pVertexDataBegin;
+		//D3D12_RANGE readRange = {};
+		//HRESULT hr = resources.vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin));
+		//Utils::Validate(hr, L"Error: failed to map vertex buffer!");
 
-		memcpy(pVertexDataBegin, model.vertices.data(), info.size);
+
+		//memcpy(pVertexDataBegin, model.vertices.data(), info.size);
+		//resources.vertexBuffer->Unmap(0, nullptr);
+
+		//// Initialize the vertex buffer view
+		//resources.vertexBufferView.BufferLocation = resources.vertexBuffer->GetGPUVirtualAddress();
+		//resources.vertexBufferView.StrideInBytes = sizeof(Vertex);
+		//resources.vertexBufferView.SizeInBytes = static_cast<UINT>(info.size);
+
+		Vertex triangleVertices[] =
+		{
+			{ { -0.5f, 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+			{ { 0.5f, -0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+			{ { -0.5f, -0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+			{ { 0.5f, 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+
+			{ { -0.75f, 0.75f, 0.7f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+			{ { 0.0f, 0.0f, 0.7f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+			{ { -0.75f, 0.0f, 0.7f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+			{ { 0.0f, 0.75f, 0.7f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+		};
+
+		const UINT vertexBufferSize = sizeof(triangleVertices);
+
+		CD3DX12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+		CD3DX12_RESOURCE_DESC vertexResourceDes = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+
+		d3d.device->CreateCommittedResource(
+			&heapProperties,
+			D3D12_HEAP_FLAG_NONE,
+			&vertexResourceDes,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&resources.vertexBuffer));
+		UINT8* pDataBegin;
+		CD3DX12_RANGE readRange(0, 0);
+
+		resources.vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin));
+		memcpy(pDataBegin, triangleVertices, sizeof(triangleVertices));
 		resources.vertexBuffer->Unmap(0, nullptr);
 
-		// Initialize the vertex buffer view
 		resources.vertexBufferView.BufferLocation = resources.vertexBuffer->GetGPUVirtualAddress();
 		resources.vertexBufferView.StrideInBytes = sizeof(Vertex);
-		resources.vertexBufferView.SizeInBytes = static_cast<UINT>(info.size);
+		resources.vertexBufferView.SizeInBytes = vertexBufferSize;
 	}
 
 	/**
@@ -198,27 +235,56 @@ namespace D3DResources
 	*/
 	void Create_Index_Buffer(D3D12Global& d3d, D3D12Resources& resources, Model& model)
 	{
-		// Create the index buffer resource
-		D3D12BufferCreateInfo info((UINT)model.indices.size() * sizeof(UINT), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-		Create_Buffer(d3d, info, &resources.indexBuffer);
-#if NAME_D3D_RESOURCES
-		resources.indexBuffer->SetName(L"Index Buffer");
-#endif
-		resources.indexCount = (UINT)model.indices.size();
+//		// Create the index buffer resource
+//		D3D12BufferCreateInfo info((UINT)model.indices.size() * sizeof(UINT), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+//		Create_Buffer(d3d, info, &resources.indexBuffer);
+//#if NAME_D3D_RESOURCES
+//		resources.indexBuffer->SetName(L"Index Buffer");
+//#endif
+//		resources.indexCount = (UINT)model.indices.size();
+//
+//		// Copy the index data to the index buffer
+//		UINT8* pIndexDataBegin;
+//		D3D12_RANGE readRange = {};
+//		HRESULT hr = resources.indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pIndexDataBegin));
+//		Utils::Validate(hr, L"Error: failed to map index buffer!");
+//
+//		memcpy(pIndexDataBegin, model.indices.data(), info.size);
+//		resources.indexBuffer->Unmap(0, nullptr);
+//
+//		// Initialize the index buffer view
+//		resources.indexBufferView.BufferLocation = resources.indexBuffer->GetGPUVirtualAddress();
+//		resources.indexBufferView.SizeInBytes = static_cast<UINT>(info.size);
+//		resources.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 
-		// Copy the index data to the index buffer
-		UINT8* pIndexDataBegin;
-		D3D12_RANGE readRange = {};
-		HRESULT hr = resources.indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pIndexDataBegin));
-		Utils::Validate(hr, L"Error: failed to map index buffer!");
+		DWORD triangleIndexs[]
+		{
+			0,1,2,
+			0,3,1
+		};
 
-		memcpy(pIndexDataBegin, model.indices.data(), info.size);
+		const UINT indexBufferSize = sizeof(triangleIndexs);
+		CD3DX12_RESOURCE_DESC indexResourceDes = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
+		CD3DX12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+
+		d3d.device->CreateCommittedResource(
+			&heapProperties,
+			D3D12_HEAP_FLAG_NONE,
+			&indexResourceDes,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&resources.indexBuffer));
+
+		UINT8* pDataBegin;
+		CD3DX12_RANGE readRange(0, 0);
+		resources.indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin));
+		memcpy(pDataBegin, triangleIndexs, sizeof(triangleIndexs));
 		resources.indexBuffer->Unmap(0, nullptr);
 
-		// Initialize the index buffer view
+		resources.indexCount = _countof(triangleIndexs);
 		resources.indexBufferView.BufferLocation = resources.indexBuffer->GetGPUVirtualAddress();
-		resources.indexBufferView.SizeInBytes = static_cast<UINT>(info.size);
 		resources.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		resources.indexBufferView.SizeInBytes = indexBufferSize;
 	}
 
 	/*
@@ -321,7 +387,7 @@ namespace D3DResources
 		HRESULT hr = d3d.device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&resources.dsvHeap));
 		Utils::Validate(hr, L"Error: failed to create RTV descriptor heap!");
 #if NAME_D3D_RESOURCES
-		resources.rtvHeap->SetName(L"RTV Descriptor Heap");
+		resources.rtvHeap->SetName(L"DSV Descriptor Heap");
 #endif
 
 		D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
@@ -607,15 +673,11 @@ namespace D3D12
 	*/
 	void Create_Command_Allocator(D3D12Global& d3d)
 	{
-		for (UINT n = 0; n < 2; n++)
-		{
-			HRESULT hr = d3d.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&d3d.cmdAlloc[n]));
-			Utils::Validate(hr, L"Error: failed to create the command allocator!");
+		HRESULT hr = d3d.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&d3d.cmdAllocate));
+		Utils::Validate(hr, L"Error: failed to create the command allocator!");
 #if NAME_D3D_RESOURCES
-			if (n == 0) d3d.cmdAlloc[n]->SetName(L"D3D12 Command Allocator 0");
-			else d3d.cmdAlloc[n]->SetName(L"D3D12 Command Allocator 1");
+		d3d.cmdAllocate->SetName(L"D3D12 Command Allocator");
 #endif
-		}
 	}
 
 	/**
@@ -623,7 +685,7 @@ namespace D3D12
 	*/
 	void Create_CommandList(D3D12Global& d3d)
 	{
-		HRESULT hr = d3d.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, d3d.cmdAlloc[d3d.frameIndex], nullptr, IID_PPV_ARGS(&d3d.cmdList));
+		HRESULT hr = d3d.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, d3d.cmdAllocate, nullptr, IID_PPV_ARGS(&d3d.cmdList));
 		hr = d3d.cmdList->Close();
 		Utils::Validate(hr, L"Error: failed to create the command list!");
 #if NAME_D3D_RESOURCES
@@ -642,7 +704,7 @@ namespace D3D12
 		d3d.fence->SetName(L"D3D12 Fence");
 #endif
 
-		d3d.fenceValues[d3d.frameIndex]++;
+		d3d.fenceValue = 1;
 
 		// Create an event handle to use for frame synchronization
 		d3d.fenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
@@ -730,12 +792,11 @@ namespace D3D12
 	*/
 	void Reset_CommandList(D3D12Global& d3d)
 	{
-		// Reset the command allocator for the current frame
-		HRESULT hr = d3d.cmdAlloc[d3d.frameIndex]->Reset();
+		HRESULT hr = d3d.cmdAllocate->Reset();
 		Utils::Validate(hr, L"Error: failed to reset command allocator!");
 
 		// Reset the command list for the current frame
-		hr = d3d.cmdList->Reset(d3d.cmdAlloc[d3d.frameIndex], nullptr);
+		hr = d3d.cmdList->Reset(d3d.cmdAllocate, d3d.PipelineState);
 		Utils::Validate(hr, L"Error: failed to reset command list!");
 	}
 
@@ -746,10 +807,10 @@ namespace D3D12
 	{
 		d3d.cmdList->Close();
 
-		ID3D12CommandList* pGraphicsList = { d3d.cmdList };
-		d3d.cmdQueue->ExecuteCommandLists(1, &pGraphicsList);
-		d3d.fenceValues[d3d.frameIndex]++;
-		d3d.cmdQueue->Signal(d3d.fence, d3d.fenceValues[d3d.frameIndex]);
+		ID3D12CommandList* pGraphicsList[] = {d3d.cmdList};
+		d3d.cmdQueue->ExecuteCommandLists(_countof(pGraphicsList), pGraphicsList);
+		//d3d.fenceValues[d3d.frameIndex]++;
+		//d3d.cmdQueue->Signal(d3d.fence, d3d.fenceValues[d3d.frameIndex]);
 	}
 
 	/**
@@ -757,7 +818,7 @@ namespace D3D12
 	 */
 	void Present(D3D12Global& d3d)
 	{
-		HRESULT hr = d3d.swapChain->Present(d3d.vsync, 0);
+		HRESULT hr = d3d.swapChain->Present(1, 0);
 		if (FAILED(hr))
 		{
 			hr = d3d.device->GetDeviceRemovedReason();
@@ -771,17 +832,17 @@ namespace D3D12
 	void WaitForGPU(D3D12Global& d3d)
 	{
 		// Schedule a signal command in the queue
-		HRESULT hr = d3d.cmdQueue->Signal(d3d.fence, d3d.fenceValues[d3d.frameIndex]);
+		HRESULT hr = d3d.cmdQueue->Signal(d3d.fence, d3d.fenceValue);
 		Utils::Validate(hr, L"Error: failed to signal fence!");
 
 		// Wait until the fence has been processed
-		hr = d3d.fence->SetEventOnCompletion(d3d.fenceValues[d3d.frameIndex], d3d.fenceEvent);
+		hr = d3d.fence->SetEventOnCompletion(d3d.fenceValue, d3d.fenceEvent);
 		Utils::Validate(hr, L"Error: failed to set fence event!");
 
 		WaitForSingleObjectEx(d3d.fenceEvent, INFINITE, FALSE);
 
 		// Increment the fence value for the current frame
-		d3d.fenceValues[d3d.frameIndex]++;
+		d3d.fenceValue++;
 	}
 
 	/**
@@ -790,7 +851,7 @@ namespace D3D12
 	void MoveToNextFrame(D3D12Global& d3d)
 	{
 		// Schedule a Signal command in the queue
-		const UINT64 currentFenceValue = d3d.fenceValues[d3d.frameIndex];
+		const UINT64 currentFenceValue = d3d.fenceValue;
 		HRESULT hr = d3d.cmdQueue->Signal(d3d.fence, currentFenceValue);
 		Utils::Validate(hr, L"Error: failed to signal command queue!");
 
@@ -798,16 +859,16 @@ namespace D3D12
 		d3d.frameIndex = d3d.swapChain->GetCurrentBackBufferIndex();
 
 		// If the next frame is not ready to be rendered yet, wait until it is
-		if (d3d.fence->GetCompletedValue() < d3d.fenceValues[d3d.frameIndex])
+		if (d3d.fence->GetCompletedValue() < currentFenceValue)
 		{
-			hr = d3d.fence->SetEventOnCompletion(d3d.fenceValues[d3d.frameIndex], d3d.fenceEvent);
+			hr = d3d.fence->SetEventOnCompletion(currentFenceValue, d3d.fenceEvent);
 			Utils::Validate(hr, L"Error: failed to set fence value!");
 
 			WaitForSingleObjectEx(d3d.fenceEvent, INFINITE, FALSE);
 		}
 
 		// Set the fence value for the next frame
-		d3d.fenceValues[d3d.frameIndex] = currentFenceValue + 1;
+		d3d.fenceValue++;
 	}
 
 	/**
@@ -819,15 +880,13 @@ namespace D3D12
 		SAFE_RELEASE(d3d.backBuffer[1]);
 		SAFE_RELEASE(d3d.backBuffer[0]);
 		SAFE_RELEASE(d3d.swapChain);
-		SAFE_RELEASE(d3d.cmdAlloc[0]);
-		SAFE_RELEASE(d3d.cmdAlloc[1]);
+		SAFE_RELEASE(d3d.cmdAllocate);
 		SAFE_RELEASE(d3d.cmdQueue);
 		SAFE_RELEASE(d3d.cmdList);
 		SAFE_RELEASE(d3d.device);
 		SAFE_RELEASE(d3d.adapter);
 		SAFE_RELEASE(d3d.factory);
 	}
-
 }
 
 //--------------------------------------------------------------------------------------
@@ -1509,22 +1568,30 @@ namespace Raster
 		D3DShaders::Compile_Shader(vsInfo, &raster.VertexShader);
 		D3DShaders::Compile_Shader(psInfo, &raster.PixelShader);
 
-		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
-		CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+		CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+		rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
-		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
-		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+		ComPtr<ID3DBlob> signature;
+		ComPtr<ID3DBlob> error;
+		D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
+		d3d.device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&raster.RootSignature));
 
-		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC  rootSignatureDesc;
-		rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
+		//CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+		//CD3DX12_ROOT_PARAMETER1 rootParameters[1];
 
-		raster.RootSignature = D3D12::Create_Root_Signature(d3d, rootSignatureDesc);
+		//ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		//rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+		//D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+		//	D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+		//	D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+		//	D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+		//	D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+		//	D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+
+		//CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC  rootSignatureDesc;
+		//rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
+
+		//raster.RootSignature = D3D12::Create_Root_Signature(d3d, rootSignatureDesc);
 	}
 
 	void Create_Pipeline_State(D3D12Global& d3d, RasterGlobal& raster)
@@ -1532,7 +1599,7 @@ namespace Raster
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "UV", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+			{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 		};
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -1549,10 +1616,10 @@ namespace Raster
 		psoDesc.NumRenderTargets = 1;
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		psoDesc.SampleDesc.Count = 1;
-		HRESULT hr = d3d.device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&raster.PipelineState));
+		HRESULT hr = d3d.device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&d3d.PipelineState));
 		Utils::Validate(hr, L"Error: failed to create graphics pipeline state!");
 
-		hr = d3d.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, d3d.cmdAlloc[d3d.frameIndex], raster.PipelineState, IID_PPV_ARGS(&d3d.cmdList));
+		hr = d3d.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, d3d.cmdAllocate, d3d.PipelineState, IID_PPV_ARGS(&d3d.cmdList));
 		hr = d3d.cmdList->Close();
 		Utils::Validate(hr, L"Error: failed to create the command list!");
 #if NAME_D3D_RESOURCES
@@ -1568,26 +1635,31 @@ namespace Raster
 
 	void Build_Command_List(D3D12Global& d3d, RasterGlobal& raster, D3D12Resources& resources)
 	{
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(resources.rtvHeap->GetCPUDescriptorHandleForHeapStart(), d3d.frameIndex, resources.rtvDescSize);
-		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(resources.dsvHeap->GetCPUDescriptorHandleForHeapStart());
-		D3D12_RESOURCE_BARRIER resBarrier =
-			CD3DX12_RESOURCE_BARRIER::Transition(d3d.backBuffer[d3d.frameIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-		d3d.cmdList->ResourceBarrier(1, &resBarrier);
 		d3d.cmdList->SetGraphicsRootSignature(raster.RootSignature);
 		d3d.cmdList->RSSetViewports(1, &raster.ViewPort);
 		d3d.cmdList->RSSetScissorRects(1, &raster.ScissorRect);
+
+		D3D12_RESOURCE_BARRIER resBarrier =
+			CD3DX12_RESOURCE_BARRIER::Transition(d3d.backBuffer[d3d.frameIndex], D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		d3d.cmdList->ResourceBarrier(1, &resBarrier);
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(resources.rtvHeap->GetCPUDescriptorHandleForHeapStart(), d3d.frameIndex, resources.rtvDescSize);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(resources.dsvHeap->GetCPUDescriptorHandleForHeapStart());
 		d3d.cmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
 		const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
 		d3d.cmdList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-		d3d.cmdList->ClearDepthStencilView(resources.dsvHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
+		d3d.cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
 		d3d.cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		d3d.cmdList->IASetVertexBuffers(0, 1, &resources.vertexBufferView);
 		d3d.cmdList->IASetIndexBuffer(&resources.indexBufferView);
-		d3d.cmdList->DrawIndexedInstanced(resources.indexCount, 1, 0, 0, 0);
+		d3d.cmdList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+		d3d.cmdList->DrawIndexedInstanced(6, 1, 0, 4, 0);
 
 		resBarrier =
 			CD3DX12_RESOURCE_BARRIER::Transition(d3d.backBuffer[d3d.frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		d3d.cmdList->ResourceBarrier(1, &resBarrier);
+
+		d3d.cmdList->Close();
 	}
 }

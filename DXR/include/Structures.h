@@ -58,27 +58,33 @@ struct ConfigInfo
 	HINSTANCE		instance = NULL;
 };
 
+//struct Vertex
+//{
+//	DirectX::XMFLOAT3 position;
+//	DirectX::XMFLOAT2 uv;
+//
+//	bool operator==(const Vertex &v) const 
+//	{
+//		if (CompareVector3WithEpsilon(position, v.position)) 
+//		{
+//			if (CompareVector2WithEpsilon(uv, v.uv)) return true;
+//			return true;
+//		}
+//		return false;
+//	}
+//
+//	Vertex& operator=(const Vertex& v) 
+//	{
+//		position = v.position;
+//		uv = v.uv;
+//		return *this;
+//	}
+//};
+
 struct Vertex
 {
 	DirectX::XMFLOAT3 position;
-	DirectX::XMFLOAT2 uv;
-
-	bool operator==(const Vertex &v) const 
-	{
-		if (CompareVector3WithEpsilon(position, v.position)) 
-		{
-			if (CompareVector2WithEpsilon(uv, v.uv)) return true;
-			return true;
-		}
-		return false;
-	}
-
-	Vertex& operator=(const Vertex& v) 
-	{
-		position = v.position;
-		uv = v.uv;
-		return *this;
-	}
+	DirectX::XMFLOAT4 color;
 };
 
 struct Material 
@@ -224,19 +230,21 @@ struct D3D12Global
 	ID3D12Device5*									device = nullptr;
 	ID3D12GraphicsCommandList4*						cmdList = nullptr;
 	ID3D12CommandQueue*								cmdQueue = nullptr;
-	ID3D12CommandAllocator*							cmdAlloc[2] = { nullptr, nullptr };
+	ID3D12CommandAllocator*							cmdAllocate = nullptr;
 
 	IDXGISwapChain3*								swapChain = nullptr;
 	ID3D12Resource*									backBuffer[2] = { nullptr, nullptr };
 
 	ID3D12Fence*									fence = nullptr;
-	UINT64											fenceValues[2] = { 0, 0 };
+	UINT64											fenceValue = 0;
 	HANDLE											fenceEvent;
 	UINT											frameIndex = 0;
 
 	int												width = 640;
 	int												height = 360;
 	bool											vsync = false;
+
+	ID3D12PipelineState*							PipelineState = nullptr;;
 };
 
 //--------------------------------------------------------------------------------------
@@ -338,7 +346,6 @@ struct RasterGlobal
 	ID3DBlob* VertexShader;
 	ID3DBlob* PixelShader;
 	ID3D12RootSignature* RootSignature;
-	ID3D12PipelineState* PipelineState;
 	CD3DX12_VIEWPORT ViewPort;
 	CD3DX12_RECT ScissorRect;
 };
