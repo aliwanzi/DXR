@@ -80,9 +80,6 @@ void Graphics::CreateResources()
 			&queueDesc, IID_PPV_ARGS(m_pCommandQueue.ReleaseAndGetAddressOf())));
 		ThrowIfFailed(m_pDevice->CreateCommandAllocator(
 			D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_pCommandAllocator.ReleaseAndGetAddressOf())));
-		ThrowIfFailed(m_pDevice->CreateCommandList(
-			0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCommandAllocator.Get(), nullptr, IID_PPV_ARGS(m_pCommandList.ReleaseAndGetAddressOf())));
-		ThrowIfFailed(m_pCommandList->Close());
 	}
 
 	{
@@ -130,6 +127,8 @@ void Graphics::CreateResources()
 			rtvHandle.Offset(1, m_RTVDescriptorSize);
 		}
 	}
+	
+	LoadGraphicsAsset();
 }
 
 void Graphics::SetWindow(HWND window, int width, int height)
@@ -138,12 +137,21 @@ void Graphics::SetWindow(HWND window, int width, int height)
 	m_OutputSize.left = m_OutputSize.top = 0;
 	m_OutputSize.right = width;
 	m_OutputSize.bottom = height;
+
+	UINT backBufferWidth = std::max<UINT>(static_cast<UINT>(m_OutputSize.right - m_OutputSize.left), 1u);
+	UINT backBufferHeight = std::max<UINT>(static_cast<UINT>(m_OutputSize.bottom - m_OutputSize.top), 1u);
+	m_viewPort = CD3DX12_VIEWPORT(0.f, 0.f, backBufferWidth, backBufferHeight);
+	m_scissorRect = CD3DX12_RECT(0, 0, backBufferWidth, backBufferHeight);
 }
 
 void Graphics::BeginFrame()
 {
 	ThrowIfFailed(m_pCommandAllocator->Reset());
 	ThrowIfFailed(m_pCommandList->Reset(m_pCommandAllocator.Get(), m_pPipelineState.Get()));
+
+	m_pCommandList->SetGraphicsRootSignature(m_pRootSignature.Get());
+	m_pCommandList->RSSetViewports(1, &m_viewPort);
+	m_pCommandList->RSSetScissorRects(1, &m_scissorRect);
 
 	D3D12_RESOURCE_BARRIER resBarrier =
 		CD3DX12_RESOURCE_BARRIER::Transition(m_pRenderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -169,9 +177,19 @@ ComPtr<ID3D12GraphicsCommandList> Graphics::GetCommandList() const
 	return m_pCommandList;
 }
 
+ComPtr<ID3D12CommandAllocator> Graphics::GetCommandAllocator() const
+{
+	return ComPtr<ID3D12CommandAllocator>();
+}
+
 ComPtr<ID3D12DescriptorHeap> Graphics::GetRTVHeap() const
 {
 	return m_pRTVHeap;
+}
+
+ComPtr<ID3D12Device> Graphics::GetDevice() const
+{
+	return m_pDevice;
 }
 
 UINT Graphics::GetFrameIndex() const
@@ -197,4 +215,62 @@ void Graphics::WaitForPreviousFrame()
 	}
 
 	m_frameIndex = m_pSwapChain->GetCurrentBackBufferIndex();
+}
+
+void Graphics::LoadGraphicsAsset()
+{
+	{
+		CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+		rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+		ComPtr<ID3DBlob> signature;
+		ComPtr<ID3DBlob> error;
+		ThrowIfFailed(D3D12SerializeRootSignature(
+			&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, signature.ReleaseAndGetAddressOf(), error.ReleaseAndGetAddressOf()));
+		ThrowIfFailed(m_pDevice->CreateRootSignature(
+			0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(m_pRootSignature.ReleaseAndGetAddressOf())));
+	}
+
+	{
+#if defined(_DEBUG)
+		// Enable better shader debugging with the graphics debugging tools.
+		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+		UINT compileFlags = 0;
+#endif
+		ThrowIfFailed(D3DCompileFromFile(L"./Asset//shaders.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, m_pVertexShader.ReleaseAndGetAddressOf(), nullptr));
+		ThrowIfFailed(D3DCompileFromFile(L"./Asset//shaders.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, m_pPixelShader.ReleaseAndGetAddressOf(), nullptr));
+	}
+
+	{
+		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+		{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		};
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+		psoDesc.InputLayout = { inputElementDescs,_countof(inputElementDescs) };
+		psoDesc.pRootSignature = m_pRootSignature.Get();
+		psoDesc.VS = CD3DX12_SHADER_BYTECODE(m_pVertexShader.Get());
+		psoDesc.PS = CD3DX12_SHADER_BYTECODE(m_pPixelShader.Get());
+
+		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		psoDesc.DepthStencilState.DepthEnable = FALSE;
+		psoDesc.DepthStencilState.StencilEnable = FALSE;
+		psoDesc.SampleMask = UINT_MAX;
+		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		psoDesc.NumRenderTargets = 1;
+		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		psoDesc.SampleDesc.Count = 1;
+		ThrowIfFailed(m_pDevice->CreateGraphicsPipelineState(
+			&psoDesc, IID_PPV_ARGS(m_pPipelineState.ReleaseAndGetAddressOf())));
+	}
+
+	{
+		ThrowIfFailed(m_pDevice->CreateCommandList(
+			0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCommandAllocator.Get(), m_pPipelineState.Get(), IID_PPV_ARGS(m_pCommandList.ReleaseAndGetAddressOf())));
+		ThrowIfFailed(m_pCommandList->Close());
+	}
 }

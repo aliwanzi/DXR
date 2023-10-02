@@ -14,12 +14,15 @@ public:
 	void EndFrame();
 	
 	ComPtr<ID3D12GraphicsCommandList> GetCommandList()const;
+	ComPtr<ID3D12CommandAllocator> GetCommandAllocator()const;
 	ComPtr<ID3D12DescriptorHeap> GetRTVHeap()const;
+	ComPtr<ID3D12Device> GetDevice()const;
 	UINT GetFrameIndex()const;
 	UINT GetDescriptorSize()const;
 
 private:
 	void WaitForPreviousFrame();
+	void LoadGraphicsAsset();
 
 protected:
 	ComPtr<IDXGIFactory4> m_pDXGIFactory;
@@ -45,4 +48,10 @@ protected:
 
 	HWND m_Window;
 	RECT m_OutputSize;
+	CD3DX12_VIEWPORT m_viewPort;
+	CD3DX12_RECT m_scissorRect;
+
+	ComPtr<ID3DBlob> m_pVertexShader;
+	ComPtr<ID3DBlob> m_pPixelShader;
+	ComPtr<ID3D12RootSignature> m_pRootSignature;
 };
