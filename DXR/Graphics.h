@@ -16,6 +16,8 @@ public:
 	ComPtr<ID3D12GraphicsCommandList> GetCommandList()const;
 	ComPtr<ID3D12CommandAllocator> GetCommandAllocator()const;
 	ComPtr<ID3D12DescriptorHeap> GetRTVHeap()const;
+	ComPtr<ID3D12DescriptorHeap> GetDSVHeap()const;
+	ComPtr<ID3D12DescriptorHeap> GetCBVHeap()const;
 	ComPtr<ID3D12Device> GetDevice()const;
 	UINT GetFrameIndex()const;
 	UINT GetDescriptorSize()const;
@@ -35,6 +37,8 @@ protected:
 	ComPtr<IDXGISwapChain3> m_pSwapChain;
 
 	ComPtr<ID3D12DescriptorHeap> m_pRTVHeap;
+	ComPtr<ID3D12DescriptorHeap> m_pDSVHeap;
+	ComPtr<ID3D12DescriptorHeap> m_pCBVHeap;
 	UINT m_RTVDescriptorSize;
 
 	ComPtr<ID3D12Resource> m_pRenderTargets[FrameCount];
@@ -54,4 +58,5 @@ protected:
 	ComPtr<ID3DBlob> m_pVertexShader;
 	ComPtr<ID3DBlob> m_pPixelShader;
 	ComPtr<ID3D12RootSignature> m_pRootSignature;
+	ComPtr<ID3D12Resource> m_pDepthStencilBuffer;
 };

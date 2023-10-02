@@ -14,6 +14,11 @@ private:
 	void OnRender();
 private:
 	std::shared_ptr<Graphics> m_spGraphics;
+
+	ComPtr<ID3D12Resource> m_pConstantBuffer;
+	SceneConstantBuffer constantBufferData;
+	UINT8* pCbvDataBegin;
+
 	ComPtr<ID3D12Resource> m_pVertexBuffer;
 	ComPtr<ID3D12Resource> m_pIndexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
