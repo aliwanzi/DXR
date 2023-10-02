@@ -104,6 +104,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>include;include\thirdparty;include\thirdparty\dxc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -119,6 +120,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>include;include\thirdparty;include\thirdparty\dxc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -129,18 +131,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DXRScene.cpp" />
-    <ClCompile Include="Geometry.cpp" />
-    <ClCompile Include="Graphics.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="RasterScene.cpp" />
+    <ClCompile Include="src\DXRScene.cpp" />
+    <ClCompile Include="src\Graphics.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\RasterScene.cpp" />
+    <ClCompile Include="src\Utils.cpp" />
+    <ClCompile Include="src\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="common.h" />
-    <ClInclude Include="DXRScene.h" />
-    <ClInclude Include="Geometry.h" />
-    <ClInclude Include="RasterScene.h" />
-    <ClInclude Include="Graphics.h" />
+    <ClInclude Include="include\Common.h" />
+    <ClInclude Include="include\DXRScene.h" />
+    <ClInclude Include="include\Graphics.h" />
+    <ClInclude Include="include\RasterScene.h" />
+    <ClInclude Include="include\Structures.h" />
+    <ClInclude Include="include\thirdparty\d3dx12.h" />
+    <ClInclude Include="include\thirdparty\dxc\dxcapi.h" />
+    <ClInclude Include="include\thirdparty\dxc\dxcapi.use.h" />
+    <ClInclude Include="include\thirdparty\stb_image.h" />
+    <ClInclude Include="include\thirdparty\tiny_obj_loader.h" />
+    <ClInclude Include="include\Utils.h" />
+    <ClInclude Include="include\Window.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
