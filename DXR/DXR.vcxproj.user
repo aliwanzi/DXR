@@ -4,7 +4,7 @@
     <ShowAllFiles>true</ShowAllFiles>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>-width 1280 -height 720 -vsync 1 -model "models\\cinema.obj"</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-width 1920 -height 1080 -vsync 1 -model "models\\cinema.obj"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

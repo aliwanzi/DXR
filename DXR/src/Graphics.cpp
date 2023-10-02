@@ -195,15 +195,14 @@ namespace D3DResources
 
 		Vertex triangleVertices[] =
 		{
-			{ { -0.5f, 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-			{ { 0.5f, -0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-			{ { -0.5f, -0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-			{ { 0.5f, 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-
-			{ { -0.75f, 0.75f, 0.7f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-			{ { 0.0f, 0.0f, 0.7f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-			{ { -0.75f, 0.0f, 0.7f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-			{ { 0.0f, 0.75f, 0.7f }, { 0.0f, 0.0f, 1.0f, 1.0f } }
+			{ { -1.0f, -1.0f, -1.0f }, { 1.0f, 1.0f } },
+			{ { -1.0f, +1.0f, -1.0f }, { 1.0f, 1.0f } },
+			{ { +1.0f, +1.0f, -1.0f }, { 1.0f, 0.0f } },
+			{ { +1.0f, -1.0f, -1.0f }, { 0.0f, 1.0f } },
+			{ { -1.0f, -1.0f, +1.0f }, { 0.0f, 0.5f } },
+			{ { -1.0f, +1.0f, +1.0f }, { 0.5f, 0.0f } },
+			{ { +1.0f, +1.0f, +1.0f }, { 0.5f, 0.5f } },
+			{ { +1.0f, -1.0f, +1.0f }, { 0.5f, 0.5f } }
 		};
 
 		const UINT vertexBufferSize = sizeof(triangleVertices);
@@ -259,8 +258,29 @@ namespace D3DResources
 
 		DWORD triangleIndexs[]
 		{
-			0,1,2,
-			0,3,1
+			// front face
+			0, 1, 2,
+			0, 2, 3,
+
+			// back face
+			4, 6, 5,
+			4, 7, 6,
+
+			// left face
+			4, 5, 1,
+			4, 1, 0,
+
+			// right face
+			3, 2, 6,
+			3, 6, 7,
+
+			// top face
+			1, 5, 6,
+			1, 6, 2,
+
+			// bottom face
+			4, 0, 3,
+			4, 3, 7
 		};
 
 		const UINT indexBufferSize = sizeof(triangleIndexs);
@@ -339,6 +359,23 @@ namespace D3DResources
 		memcpy(resources.viewCBStart, &resources.viewCBData, sizeof(resources.viewCBData));
 	}
 
+	void Create_MVP_CB(D3D12Global& d3d, D3D12Resources& resources)
+	{
+		Create_Constant_Buffer(d3d, &resources.MVPViewCB, sizeof(ModelViewProjecion));
+#if NAME_D3D_RESOURCES
+		resources.MVPViewCB->SetName(L"MVPView Constant Buffer");
+#endif
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation = resources.MVPViewCB->GetGPUVirtualAddress();
+		cbvDesc.SizeInBytes = (sizeof(ModelViewProjecion) + 255) & ~255;
+		d3d.device->CreateConstantBufferView(&cbvDesc, resources.cbvHeap->GetCPUDescriptorHandleForHeapStart());
+
+		HRESULT hr = resources.MVPViewCB->Map(0, nullptr, reinterpret_cast<void**>(&resources.MVPCBStart));
+		Utils::Validate(hr, L"Error: failed to map WorldView constant buffer!");
+
+		memcpy(resources.MVPCBStart, &resources.MVPCBData, sizeof(resources.MVPCBData));
+	}
+
 	/**
 	* Create and initialize the material constant buffer.
 	*/
@@ -409,6 +446,15 @@ namespace D3DResources
 		d3d.device->CreateDepthStencilView(resources.depthStencilBuffer, &depthStencilDesc, resources.dsvHeap->GetCPUDescriptorHandleForHeapStart());
 	}
 
+	void Create_Descriptor_CBVHeaps(D3D12Global& d3d, D3D12Resources& resources)
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
+		cbvHeapDesc.NumDescriptors = 1;
+		cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		d3d.device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&resources.cbvHeap));
+	}
+
 	/**
 	* Update the view constant buffer.
 	*/
@@ -449,6 +495,23 @@ namespace D3DResources
 		resources.viewCBData.viewOriginAndTanHalfFovY = XMFLOAT4(eye.x, eye.y, eye.z, tanf(fov * 0.5f));
 		resources.viewCBData.resolution = XMFLOAT2((float)d3d.width, (float)d3d.height);
 		memcpy(resources.viewCBStart, &resources.viewCBData, sizeof(resources.viewCBData));
+	}
+
+	void Update_MVP_CB(D3D12Global& d3d, D3D12Resources& resources)
+	{
+		XMVECTOR pos = XMVectorSet(0.0f, 5.0f, -5.0f, 1.0f);
+		XMVECTOR target = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+		XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+		XMMATRIX v = XMMatrixLookAtLH(pos, target, up);
+
+		XMMATRIX m = XMMatrixIdentity();
+		XMMATRIX p = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)d3d.width / (float)d3d.height, 1.0f, 1000.0f);
+		XMMATRIX MVP = m * v * p;
+
+		ModelViewProjecion objConstants;
+		XMStoreFloat4x4(&objConstants.MVP, XMMatrixTranspose(MVP));
+		memcpy(resources.MVPCBStart, &objConstants, sizeof(objConstants));
 	}
 
 	/**
@@ -1568,30 +1631,22 @@ namespace Raster
 		D3DShaders::Compile_Shader(vsInfo, &raster.VertexShader);
 		D3DShaders::Compile_Shader(psInfo, &raster.PixelShader);
 
-		CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-		rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+		CD3DX12_ROOT_PARAMETER1 rootParameters[1];
 
-		ComPtr<ID3DBlob> signature;
-		ComPtr<ID3DBlob> error;
-		D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
-		d3d.device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&raster.RootSignature));
+		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 
-		//CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
-		//CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC  rootSignatureDesc;
+		rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
 
-		//ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		//rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
-		//D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
-		//	D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-		//	D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-		//	D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-		//	D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-		//	D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
-
-		//CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC  rootSignatureDesc;
-		//rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
-
-		//raster.RootSignature = D3D12::Create_Root_Signature(d3d, rootSignatureDesc);
+		raster.RootSignature = D3D12::Create_Root_Signature(d3d, rootSignatureDesc);
 	}
 
 	void Create_Pipeline_State(D3D12Global& d3d, RasterGlobal& raster)
@@ -1599,7 +1654,7 @@ namespace Raster
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+			{ "COORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 		};
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -1616,6 +1671,7 @@ namespace Raster
 		psoDesc.NumRenderTargets = 1;
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		psoDesc.SampleDesc.Count = 1;
+		psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
 		HRESULT hr = d3d.device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&d3d.PipelineState));
 		Utils::Validate(hr, L"Error: failed to create graphics pipeline state!");
 
@@ -1636,6 +1692,11 @@ namespace Raster
 	void Build_Command_List(D3D12Global& d3d, RasterGlobal& raster, D3D12Resources& resources)
 	{
 		d3d.cmdList->SetGraphicsRootSignature(raster.RootSignature);
+
+		ID3D12DescriptorHeap* ppHeaps[] = { resources.cbvHeap };
+		d3d.cmdList->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+		d3d.cmdList->SetGraphicsRootDescriptorTable(0, resources.cbvHeap->GetGPUDescriptorHandleForHeapStart());
+
 		d3d.cmdList->RSSetViewports(1, &raster.ViewPort);
 		d3d.cmdList->RSSetScissorRects(1, &raster.ScissorRect);
 
@@ -1653,8 +1714,7 @@ namespace Raster
 		d3d.cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		d3d.cmdList->IASetVertexBuffers(0, 1, &resources.vertexBufferView);
 		d3d.cmdList->IASetIndexBuffer(&resources.indexBufferView);
-		d3d.cmdList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-		d3d.cmdList->DrawIndexedInstanced(6, 1, 0, 4, 0);
+		d3d.cmdList->DrawIndexedInstanced(resources.indexCount, 1, 0, 0, 0);
 
 		resBarrier =
 			CD3DX12_RESOURCE_BARRIER::Transition(d3d.backBuffer[d3d.frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

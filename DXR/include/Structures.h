@@ -58,34 +58,34 @@ struct ConfigInfo
 	HINSTANCE		instance = NULL;
 };
 
-//struct Vertex
-//{
-//	DirectX::XMFLOAT3 position;
-//	DirectX::XMFLOAT2 uv;
-//
-//	bool operator==(const Vertex &v) const 
-//	{
-//		if (CompareVector3WithEpsilon(position, v.position)) 
-//		{
-//			if (CompareVector2WithEpsilon(uv, v.uv)) return true;
-//			return true;
-//		}
-//		return false;
-//	}
-//
-//	Vertex& operator=(const Vertex& v) 
-//	{
-//		position = v.position;
-//		uv = v.uv;
-//		return *this;
-//	}
-//};
-
 struct Vertex
 {
 	DirectX::XMFLOAT3 position;
-	DirectX::XMFLOAT4 color;
+	DirectX::XMFLOAT2 uv;
+
+	bool operator==(const Vertex &v) const 
+	{
+		if (CompareVector3WithEpsilon(position, v.position)) 
+		{
+			if (CompareVector2WithEpsilon(uv, v.uv)) return true;
+			return true;
+		}
+		return false;
+	}
+
+	Vertex& operator=(const Vertex& v) 
+	{
+		position = v.position;
+		uv = v.uv;
+		return *this;
+	}
 };
+
+//struct Vertex
+//{
+//	DirectX::XMFLOAT3 position;
+//	DirectX::XMFLOAT4 color;
+//};
 
 struct Material 
 {
@@ -119,6 +119,11 @@ struct ViewCB
 	DirectX::XMMATRIX view = DirectX::XMMatrixIdentity();
 	DirectX::XMFLOAT4 viewOriginAndTanHalfFovY = DirectX::XMFLOAT4(0, 0.f, 0.f, 0.f);
 	DirectX::XMFLOAT2 resolution = DirectX::XMFLOAT2(1280, 720);
+};
+
+struct ModelViewProjecion
+{
+	DirectX::XMFLOAT4X4 MVP;
 };
 
 //--------------------------------------------------------------------------------------
@@ -202,12 +207,17 @@ struct D3D12Resources
 	ViewCB											viewCBData;
 	UINT8*											viewCBStart = nullptr;
 
+	ID3D12Resource*									MVPViewCB = nullptr;
+	ModelViewProjecion								MVPCBData;
+	UINT8*											MVPCBStart = nullptr;
+
 	ID3D12Resource*									materialCB = nullptr;
 	MaterialCB										materialCBData;	
 	UINT8*											materialCBStart = nullptr;
 
 	ID3D12DescriptorHeap*							rtvHeap = nullptr;
 	ID3D12DescriptorHeap*							dsvHeap = nullptr;
+	ID3D12DescriptorHeap*							cbvHeap = nullptr;
 	ID3D12DescriptorHeap*							descriptorHeap = nullptr;
 
 	ID3D12Resource*									depthStencilBuffer = nullptr;

@@ -54,11 +54,14 @@ namespace D3DResources
 	void Create_Constant_Buffer(D3D12Global &d3d, ID3D12Resource** buffer, UINT64 size);
 	void Create_BackBuffer_RTV(D3D12Global &d3d, D3D12Resources &resources);
 	void Create_View_CB(D3D12Global &d3d, D3D12Resources &resources);
+	void Create_MVP_CB(D3D12Global& d3d, D3D12Resources& resources);
 	void Create_Material_CB(D3D12Global &d3d, D3D12Resources &resources, const Material &material);
 	void Create_Descriptor_RTVHeaps(D3D12Global &d3d, D3D12Resources &resources);
 	void Create_Descriptor_DSVHeaps(D3D12Global& d3d, D3D12Resources& resources);
+	void Create_Descriptor_CBVHeaps(D3D12Global& d3d, D3D12Resources& resources);
 
 	void Update_View_CB(D3D12Global &d3d, D3D12Resources &resources);
+	void Update_MVP_CB(D3D12Global& d3d, D3D12Resources& resources);
 
 	void Upload_Texture(D3D12Global &d3d, ID3D12Resource* destResource, ID3D12Resource* srcResource, const TextureInfo &texture);
 
