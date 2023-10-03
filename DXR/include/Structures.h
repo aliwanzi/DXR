@@ -121,7 +121,7 @@ struct ViewCB
 	DirectX::XMFLOAT2 resolution = DirectX::XMFLOAT2(1280, 720);
 };
 
-struct ModelViewProjecion
+struct MVPCB
 {
 	DirectX::XMFLOAT4X4 MVP;
 };
@@ -208,7 +208,7 @@ struct D3D12Resources
 	UINT8*											viewCBStart = nullptr;
 
 	ID3D12Resource*									MVPViewCB = nullptr;
-	ModelViewProjecion								MVPCBData;
+	MVPCB											MVPCBData;
 	UINT8*											MVPCBStart = nullptr;
 
 	ID3D12Resource*									materialCB = nullptr;
@@ -222,10 +222,12 @@ struct D3D12Resources
 
 	ID3D12Resource*									depthStencilBuffer = nullptr;
 
+	TextureInfo										textureInfo;
 	ID3D12Resource*									texture = nullptr;
 	ID3D12Resource*									textureUploadResource = nullptr;
 
 	UINT											rtvDescSize = 0;
+	UINT											cbvDescSize = 0;
 
 	float											translationOffset = 0;
 	float											rotationOffset = 0;

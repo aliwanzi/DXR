@@ -119,6 +119,7 @@ namespace Raster
 {
 	void Create_Raster_Program(D3D12Global& d3d, RasterGlobal& raster);
 	void Create_Pipeline_State(D3D12Global& d3d, RasterGlobal& raster);
+	void Create_Descriptor_Heaps(D3D12Global& d3d, D3D12Resources& resources);
 	void Resize(D3D12Global& d3d, RasterGlobal& raster);
 	void Build_Command_List(D3D12Global& d3d, RasterGlobal& raster, D3D12Resources& resources);
 }

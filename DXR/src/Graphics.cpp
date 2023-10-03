@@ -76,18 +76,22 @@ namespace D3DResources
 	void Create_Texture(D3D12Global& d3d, D3D12Resources& resources, Material& material)
 	{
 		// Load the texture
-		TextureInfo texture = Utils::LoadTexture(material.texturePath);
-		material.textureResolution = static_cast<float>(texture.width);
+		resources.textureInfo = Utils::LoadTexture(material.texturePath);
+		material.textureResolution = static_cast<float>(resources.textureInfo.width);
 
 		// Describe the texture
 		D3D12_RESOURCE_DESC textureDesc = {};
-		textureDesc.Width = texture.width;
-		textureDesc.Height = texture.height;
-		textureDesc.MipLevels = 1;
-		textureDesc.DepthOrArraySize = 1;
-		textureDesc.SampleDesc.Count = 1;
-		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		textureDesc.Alignment = 0;
+		textureDesc.Width = resources.textureInfo.width;
+		textureDesc.Height = resources.textureInfo.height;
+		textureDesc.DepthOrArraySize = 1;
+		textureDesc.MipLevels = 1;
+		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		textureDesc.SampleDesc.Count = 1;
+		textureDesc.SampleDesc.Quality = 0;
+		textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
 		// Create the texture resource
 		HRESULT hr = d3d.device->CreateCommittedResource(&DefaultHeapProperties, D3D12_HEAP_FLAG_NONE, &textureDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&resources.texture));
@@ -95,27 +99,15 @@ namespace D3DResources
 #if NAME_D3D_RESOURCES
 		resources.texture->SetName(L"Texture");
 #endif
+		const UINT64 uploadBufferSize = GetRequiredIntermediateSize(resources.texture, 0, 1);
 
-		// Describe the resource
-		D3D12_RESOURCE_DESC resourceDesc = {};
-		resourceDesc.Width = (texture.width * texture.height * texture.stride);
-		resourceDesc.Height = 1;
-		resourceDesc.DepthOrArraySize = 1;
-		resourceDesc.MipLevels = 1;
-		resourceDesc.SampleDesc.Count = 1;
-		resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-		resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-		resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-
-		// Create the upload heap
+		CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+		//Create the upload heap
 		hr = d3d.device->CreateCommittedResource(&UploadHeapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&resources.textureUploadResource));
 		Utils::Validate(hr, L"Error: failed to create texture upload heap!");
 #if NAME_D3D_RESOURCES
 		resources.textureUploadResource->SetName(L"Texture Upload Buffer");
 #endif
-
-		// Upload the texture to the GPU
-		Upload_Texture(d3d, resources.texture, resources.textureUploadResource, texture);
 	}
 
 	/**
@@ -123,47 +115,14 @@ namespace D3DResources
 	 */
 	void Upload_Texture(D3D12Global& d3d, ID3D12Resource* destResource, ID3D12Resource* srcResource, const TextureInfo& texture)
 	{
-		// Copy the pixel data to the upload heap resource
-		UINT8* pData;
-		HRESULT hr = srcResource->Map(0, nullptr, reinterpret_cast<void**>(&pData));
-		memcpy(pData, texture.pixels.data(), texture.width * texture.height * texture.stride);
-		srcResource->Unmap(0, nullptr);
+		D3D12_SUBRESOURCE_DATA textureData = {};
+		textureData.pData = texture.pixels.data();
+		textureData.RowPitch = texture.width * texture.stride;
+		textureData.SlicePitch = texture.width * texture.height * texture.stride;
 
-		// Describe the upload heap resource location for the copy
-		D3D12_SUBRESOURCE_FOOTPRINT subresource = {};
-		subresource.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		subresource.Width = texture.width;
-		subresource.Height = texture.height;
-		subresource.RowPitch = (texture.width * texture.stride);
-		subresource.Depth = 1;
-
-		D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint = {};
-		footprint.Offset = texture.offset;
-		footprint.Footprint = subresource;
-
-		D3D12_TEXTURE_COPY_LOCATION source = {};
-		source.pResource = srcResource;
-		source.PlacedFootprint = footprint;
-		source.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-
-		// Describe the default heap resource location for the copy
-		D3D12_TEXTURE_COPY_LOCATION destination = {};
-		destination.pResource = destResource;
-		destination.SubresourceIndex = 0;
-		destination.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-
-		// Copy the buffer resource from the upload heap to the texture resource on the default heap
-		d3d.cmdList->CopyTextureRegion(&destination, 0, 0, 0, &source, nullptr);
-
-		// Transition the texture to a shader resource
-		D3D12_RESOURCE_BARRIER barrier = {};
-		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-		barrier.Transition.pResource = destResource;
-		barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-		barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-		barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-		d3d.cmdList->ResourceBarrier(1, &barrier);
+		UpdateSubresources(d3d.cmdList, destResource, srcResource, 0, 0, 1, &textureData);
+		CD3DX12_RESOURCE_BARRIER resBarrier = CD3DX12_RESOURCE_BARRIER::Transition(destResource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		d3d.cmdList->ResourceBarrier(1, &resBarrier);
 	}
 
 	/*
@@ -171,62 +130,27 @@ namespace D3DResources
 	*/
 	void Create_Vertex_Buffer(D3D12Global& d3d, D3D12Resources& resources, Model& model)
 	{
-//		// Create the vertex buffer resource
-//		D3D12BufferCreateInfo info(((UINT)model.vertices.size() * sizeof(Vertex)), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-//		Create_Buffer(d3d, info, &resources.vertexBuffer);
-//#if NAME_D3D_RESOURCES
-//		resources.vertexBuffer->SetName(L"Vertex Buffer");
-//#endif
+		// Create the vertex buffer resource
+		D3D12BufferCreateInfo info(((UINT)model.vertices.size() * sizeof(Vertex)), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+		Create_Buffer(d3d, info, &resources.vertexBuffer);
+#if NAME_D3D_RESOURCES
+		resources.vertexBuffer->SetName(L"Vertex Buffer");
+#endif
 
-		//// Copy the vertex data to the vertex buffer
-		//UINT8* pVertexDataBegin;
-		//D3D12_RANGE readRange = {};
-		//HRESULT hr = resources.vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin));
-		//Utils::Validate(hr, L"Error: failed to map vertex buffer!");
+		// Copy the vertex data to the vertex buffer
+		UINT8* pVertexDataBegin;
+		D3D12_RANGE readRange = {};
+		HRESULT hr = resources.vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin));
+		Utils::Validate(hr, L"Error: failed to map vertex buffer!");
 
 
-		//memcpy(pVertexDataBegin, model.vertices.data(), info.size);
-		//resources.vertexBuffer->Unmap(0, nullptr);
-
-		//// Initialize the vertex buffer view
-		//resources.vertexBufferView.BufferLocation = resources.vertexBuffer->GetGPUVirtualAddress();
-		//resources.vertexBufferView.StrideInBytes = sizeof(Vertex);
-		//resources.vertexBufferView.SizeInBytes = static_cast<UINT>(info.size);
-
-		Vertex triangleVertices[] =
-		{
-			{ { -1.0f, -1.0f, -1.0f }, { 1.0f, 1.0f } },
-			{ { -1.0f, +1.0f, -1.0f }, { 1.0f, 1.0f } },
-			{ { +1.0f, +1.0f, -1.0f }, { 1.0f, 0.0f } },
-			{ { +1.0f, -1.0f, -1.0f }, { 0.0f, 1.0f } },
-			{ { -1.0f, -1.0f, +1.0f }, { 0.0f, 0.5f } },
-			{ { -1.0f, +1.0f, +1.0f }, { 0.5f, 0.0f } },
-			{ { +1.0f, +1.0f, +1.0f }, { 0.5f, 0.5f } },
-			{ { +1.0f, -1.0f, +1.0f }, { 0.5f, 0.5f } }
-		};
-
-		const UINT vertexBufferSize = sizeof(triangleVertices);
-
-		CD3DX12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		CD3DX12_RESOURCE_DESC vertexResourceDes = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-
-		d3d.device->CreateCommittedResource(
-			&heapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&vertexResourceDes,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&resources.vertexBuffer));
-		UINT8* pDataBegin;
-		CD3DX12_RANGE readRange(0, 0);
-
-		resources.vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin));
-		memcpy(pDataBegin, triangleVertices, sizeof(triangleVertices));
+		memcpy(pVertexDataBegin, model.vertices.data(), info.size);
 		resources.vertexBuffer->Unmap(0, nullptr);
 
+		// Initialize the vertex buffer view
 		resources.vertexBufferView.BufferLocation = resources.vertexBuffer->GetGPUVirtualAddress();
 		resources.vertexBufferView.StrideInBytes = sizeof(Vertex);
-		resources.vertexBufferView.SizeInBytes = vertexBufferSize;
+		resources.vertexBufferView.SizeInBytes = static_cast<UINT>(info.size);
 	}
 
 	/**
@@ -234,77 +158,27 @@ namespace D3DResources
 	*/
 	void Create_Index_Buffer(D3D12Global& d3d, D3D12Resources& resources, Model& model)
 	{
-//		// Create the index buffer resource
-//		D3D12BufferCreateInfo info((UINT)model.indices.size() * sizeof(UINT), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-//		Create_Buffer(d3d, info, &resources.indexBuffer);
-//#if NAME_D3D_RESOURCES
-//		resources.indexBuffer->SetName(L"Index Buffer");
-//#endif
-//		resources.indexCount = (UINT)model.indices.size();
-//
-//		// Copy the index data to the index buffer
-//		UINT8* pIndexDataBegin;
-//		D3D12_RANGE readRange = {};
-//		HRESULT hr = resources.indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pIndexDataBegin));
-//		Utils::Validate(hr, L"Error: failed to map index buffer!");
-//
-//		memcpy(pIndexDataBegin, model.indices.data(), info.size);
-//		resources.indexBuffer->Unmap(0, nullptr);
-//
-//		// Initialize the index buffer view
-//		resources.indexBufferView.BufferLocation = resources.indexBuffer->GetGPUVirtualAddress();
-//		resources.indexBufferView.SizeInBytes = static_cast<UINT>(info.size);
-//		resources.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+		// Create the index buffer resource
+		D3D12BufferCreateInfo info((UINT)model.indices.size() * sizeof(UINT), D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+		Create_Buffer(d3d, info, &resources.indexBuffer);
+#if NAME_D3D_RESOURCES
+		resources.indexBuffer->SetName(L"Index Buffer");
+#endif
+		resources.indexCount = (UINT)model.indices.size();
 
-		DWORD triangleIndexs[]
-		{
-			// front face
-			0, 1, 2,
-			0, 2, 3,
+		// Copy the index data to the index buffer
+		UINT8* pIndexDataBegin;
+		D3D12_RANGE readRange = {};
+		HRESULT hr = resources.indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pIndexDataBegin));
+		Utils::Validate(hr, L"Error: failed to map index buffer!");
 
-			// back face
-			4, 6, 5,
-			4, 7, 6,
-
-			// left face
-			4, 5, 1,
-			4, 1, 0,
-
-			// right face
-			3, 2, 6,
-			3, 6, 7,
-
-			// top face
-			1, 5, 6,
-			1, 6, 2,
-
-			// bottom face
-			4, 0, 3,
-			4, 3, 7
-		};
-
-		const UINT indexBufferSize = sizeof(triangleIndexs);
-		CD3DX12_RESOURCE_DESC indexResourceDes = CD3DX12_RESOURCE_DESC::Buffer(indexBufferSize);
-		CD3DX12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-
-		d3d.device->CreateCommittedResource(
-			&heapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&indexResourceDes,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&resources.indexBuffer));
-
-		UINT8* pDataBegin;
-		CD3DX12_RANGE readRange(0, 0);
-		resources.indexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pDataBegin));
-		memcpy(pDataBegin, triangleIndexs, sizeof(triangleIndexs));
+		memcpy(pIndexDataBegin, model.indices.data(), info.size);
 		resources.indexBuffer->Unmap(0, nullptr);
 
-		resources.indexCount = _countof(triangleIndexs);
+		// Initialize the index buffer view
 		resources.indexBufferView.BufferLocation = resources.indexBuffer->GetGPUVirtualAddress();
+		resources.indexBufferView.SizeInBytes = static_cast<UINT>(info.size);
 		resources.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-		resources.indexBufferView.SizeInBytes = indexBufferSize;
 	}
 
 	/*
@@ -361,15 +235,10 @@ namespace D3DResources
 
 	void Create_MVP_CB(D3D12Global& d3d, D3D12Resources& resources)
 	{
-		Create_Constant_Buffer(d3d, &resources.MVPViewCB, sizeof(ModelViewProjecion));
+		Create_Constant_Buffer(d3d, &resources.MVPViewCB, sizeof(MVPCB));
 #if NAME_D3D_RESOURCES
 		resources.MVPViewCB->SetName(L"MVPView Constant Buffer");
 #endif
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation = resources.MVPViewCB->GetGPUVirtualAddress();
-		cbvDesc.SizeInBytes = (sizeof(ModelViewProjecion) + 255) & ~255;
-		d3d.device->CreateConstantBufferView(&cbvDesc, resources.cbvHeap->GetCPUDescriptorHandleForHeapStart());
-
 		HRESULT hr = resources.MVPViewCB->Map(0, nullptr, reinterpret_cast<void**>(&resources.MVPCBStart));
 		Utils::Validate(hr, L"Error: failed to map WorldView constant buffer!");
 
@@ -449,10 +318,11 @@ namespace D3DResources
 	void Create_Descriptor_CBVHeaps(D3D12Global& d3d, D3D12Resources& resources)
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC cbvHeapDesc = {};
-		cbvHeapDesc.NumDescriptors = 1;
+		cbvHeapDesc.NumDescriptors = 2;
 		cbvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		cbvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 		d3d.device->CreateDescriptorHeap(&cbvHeapDesc, IID_PPV_ARGS(&resources.cbvHeap));
+		resources.cbvDescSize = d3d.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	}
 
 	/**
@@ -509,7 +379,7 @@ namespace D3DResources
 		XMMATRIX p = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)d3d.width / (float)d3d.height, 1.0f, 1000.0f);
 		XMMATRIX MVP = m * v * p;
 
-		ModelViewProjecion objConstants;
+		MVPCB objConstants;
 		XMStoreFloat4x4(&objConstants.MVP, XMMatrixTranspose(MVP));
 		memcpy(resources.MVPCBStart, &objConstants, sizeof(objConstants));
 	}
@@ -832,6 +702,7 @@ namespace D3D12
 	ID3D12RootSignature* Create_Root_Signature(D3D12Global& d3d, const CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC& desc)
 	{
 		D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 		if (FAILED(d3d.device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
 		{
 			featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
@@ -881,7 +752,7 @@ namespace D3D12
 	 */
 	void Present(D3D12Global& d3d)
 	{
-		HRESULT hr = d3d.swapChain->Present(1, 0);
+		HRESULT hr = d3d.swapChain->Present(d3d.vsync, 0);
 		if (FAILED(hr))
 		{
 			hr = d3d.device->GetDeviceRemovedReason();
@@ -1631,20 +1502,35 @@ namespace Raster
 		D3DShaders::Compile_Shader(vsInfo, &raster.VertexShader);
 		D3DShaders::Compile_Shader(psInfo, &raster.PixelShader);
 
-		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
+		CD3DX12_DESCRIPTOR_RANGE1 ranges[2];
 		CD3DX12_ROOT_PARAMETER1 rootParameters[1];
 
 		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+		ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
+		rootParameters[0].InitAsDescriptorTable(2, &ranges[0], D3D12_SHADER_VISIBILITY_ALL);
 		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
-			D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
+			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
+
+		D3D12_STATIC_SAMPLER_DESC sampler = {};
+		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.MipLODBias = 0;
+		sampler.MaxAnisotropy = 0;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
+		sampler.ShaderRegister = 0;
+		sampler.RegisterSpace = 0;
+		sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC  rootSignatureDesc;
-		rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
+		rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, rootSignatureFlags);
 
 		raster.RootSignature = D3D12::Create_Root_Signature(d3d, rootSignatureDesc);
 	}
@@ -1654,7 +1540,7 @@ namespace Raster
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 		{
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "COORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 		};
 
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
@@ -1676,11 +1562,32 @@ namespace Raster
 		Utils::Validate(hr, L"Error: failed to create graphics pipeline state!");
 
 		hr = d3d.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, d3d.cmdAllocate, d3d.PipelineState, IID_PPV_ARGS(&d3d.cmdList));
-		hr = d3d.cmdList->Close();
+
 		Utils::Validate(hr, L"Error: failed to create the command list!");
 #if NAME_D3D_RESOURCES
 		d3d.cmdList->SetName(L"D3D12 Command List");
 #endif
+	}
+
+	void Create_Descriptor_Heaps(D3D12Global& d3d, D3D12Resources& resources)
+	{
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
+		cbvDesc.BufferLocation = resources.MVPViewCB->GetGPUVirtualAddress();
+		cbvDesc.SizeInBytes = (sizeof(MVPCB) + 255) & ~255;
+		d3d.device->CreateConstantBufferView(&cbvDesc, resources.cbvHeap->GetCPUDescriptorHandleForHeapStart());
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE cbvsrvHandle(resources.cbvHeap->GetCPUDescriptorHandleForHeapStart());
+		cbvsrvHandle.Offset(1, resources.cbvDescSize);
+		// Upload the texture to the GPU
+		D3DResources::Upload_Texture(d3d, resources.texture, resources.textureUploadResource, resources.textureInfo);
+		d3d.device->CreateShaderResourceView(resources.texture, &srvDesc, cbvsrvHandle);
 	}
 
 	void Resize(D3D12Global& d3d, RasterGlobal& raster)
@@ -1708,7 +1615,7 @@ namespace Raster
 		CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(resources.dsvHeap->GetCPUDescriptorHandleForHeapStart());
 		d3d.cmdList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
-		const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+		const float clearColor[] = { 0.2f, 0.2f, 0.2f, 1.f };
 		d3d.cmdList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 		d3d.cmdList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
 		d3d.cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -1719,7 +1626,5 @@ namespace Raster
 		resBarrier =
 			CD3DX12_RESOURCE_BARRIER::Transition(d3d.backBuffer[d3d.frameIndex], D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		d3d.cmdList->ResourceBarrier(1, &resBarrier);
-
-		d3d.cmdList->Close();
 	}
 }

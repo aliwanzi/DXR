@@ -13,7 +13,7 @@ RasterScene::RasterScene(ConfigInfo& config)
 	d3d.vsync = config.vsync;
 
 	// Load a model
-	//Utils::LoadModel(config.model, model, material);
+	Utils::LoadModel(config.model, model, material);
 
 	// Initialize D3D12
 	D3D12::Create_Device(d3d);
@@ -30,11 +30,17 @@ RasterScene::RasterScene(ConfigInfo& config)
 	D3DResources::Create_Vertex_Buffer(d3d, resources, model);
 	D3DResources::Create_Index_Buffer(d3d, resources, model);
 	D3DResources::Create_MVP_CB(d3d, resources);
+	D3DResources::Create_Texture(d3d, resources, material);
 
 	// Create Raster specific resources
 	Raster::Resize(d3d, raster);
 	Raster::Create_Raster_Program(d3d, raster);
 	Raster::Create_Pipeline_State(d3d, raster);
+	Raster::Create_Descriptor_Heaps(d3d, resources);
+
+	D3D12::Submit_CmdList(d3d);
+	D3D12::WaitForGPU(d3d);
+	D3D12::Reset_CommandList(d3d);
 }
 
 RasterScene::~RasterScene()
@@ -49,11 +55,11 @@ void RasterScene::Update()
 
 void RasterScene::Render()
 {
-	D3D12::Reset_CommandList(d3d);
 	Raster::Build_Command_List(d3d, raster, resources);
 	D3D12::Submit_CmdList(d3d);
 	D3D12::Present(d3d);
 	D3D12::MoveToNextFrame(d3d);
+	D3D12::Reset_CommandList(d3d);
 }
 
 void RasterScene::CleanUp()
