@@ -26,7 +26,8 @@
  */
 
 #include "Window.h"
-
+#include "Camera.h"
+#include <windowsx.h>
 #include <iostream>
 
 /**
@@ -41,8 +42,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             BeginPaint( hWnd, &ps );
             EndPaint( hWnd, &ps );
             break;
-		case WM_KEYUP:
-			if (wParam == VK_ESCAPE) PostQuitMessage(0);
+		case WM_MOUSEMOVE:
+			Camera::GetInstance().OnMouseMove(wParam, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 			break;
         case WM_DESTROY:
             PostQuitMessage( 0 );

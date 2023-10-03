@@ -211,15 +211,15 @@ namespace Utils
 				Vertex vertex = {};
 				vertex.position =
 				{
-					attrib.vertices[3 * index.vertex_index + 2],
+					attrib.vertices[3 * index.vertex_index + 0],
 					attrib.vertices[3 * index.vertex_index + 1],
-					attrib.vertices[3 * index.vertex_index + 0]
+					attrib.vertices[3 * index.vertex_index + 2]
 				};
 
 				vertex.uv =
 				{
 					attrib.texcoords[2 * index.texcoord_index + 0],
-					1 - attrib.texcoords[2 * index.texcoord_index + 1]
+					attrib.texcoords[2 * index.texcoord_index + 1]
 				};
 
 				// Fast find unique vertices using a hash
@@ -269,6 +269,7 @@ namespace Utils
 	{
 		TextureInfo result = {};
 
+		stbi_set_flip_vertically_on_load(true);
 		// Load image pixels with stb_image
 		UINT8* pixels = stbi_load(filepath.c_str(), &result.width, &result.height, &result.stride, STBI_default);
 		if (!pixels)

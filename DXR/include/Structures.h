@@ -68,7 +68,6 @@ struct Vertex
 		if (CompareVector3WithEpsilon(position, v.position)) 
 		{
 			if (CompareVector2WithEpsilon(uv, v.uv)) return true;
-			return true;
 		}
 		return false;
 	}
@@ -80,12 +79,6 @@ struct Vertex
 		return *this;
 	}
 };
-
-//struct Vertex
-//{
-//	DirectX::XMFLOAT3 position;
-//	DirectX::XMFLOAT4 color;
-//};
 
 struct Material 
 {

@@ -7,4 +7,8 @@
     <LocalDebuggerCommandArguments>-width 1920 -height 1080 -vsync 1 -model "models\\cinema.obj"</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LocalDebuggerCommandArguments>-width 1920 -height 1080 -vsync 1 -model "models\\cinema.obj"</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
 </Project>

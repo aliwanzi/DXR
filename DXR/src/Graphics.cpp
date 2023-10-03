@@ -26,8 +26,7 @@
  */
 
 #include <wrl.h>
- //#include <atlcomcli.h>
-
+#include "Camera.h"
 #include "Graphics.h"
 #include "Utils.h"
 
@@ -369,14 +368,11 @@ namespace D3DResources
 
 	void Update_MVP_CB(D3D12Global& d3d, D3D12Resources& resources)
 	{
-		XMVECTOR pos = XMVectorSet(0.0f, 5.0f, -5.0f, 1.0f);
-		XMVECTOR target = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-		XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-
-		XMMATRIX v = XMMatrixLookAtLH(pos, target, up);
-
+		Camera::GetInstance().Auto();
+		Camera::GetInstance().OnKeyboardInput();
+		XMMATRIX v = Camera::GetInstance().GetView();
+		XMMATRIX p = Camera::GetInstance().GetProj();
 		XMMATRIX m = XMMatrixIdentity();
-		XMMATRIX p = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)d3d.width / (float)d3d.height, 1.0f, 1000.0f);
 		XMMATRIX MVP = m * v * p;
 
 		MVPCB objConstants;
