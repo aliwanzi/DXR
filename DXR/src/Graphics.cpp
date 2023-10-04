@@ -29,6 +29,8 @@
 #include "Camera.h"
 #include "Graphics.h"
 #include "Utils.h"
+#include <sstream>
+#include <fstream>
 
 using namespace std;
 using namespace DirectX;
@@ -85,7 +87,7 @@ namespace D3DResources
 		textureDesc.Width = resources.textureInfo.width;
 		textureDesc.Height = resources.textureInfo.height;
 		textureDesc.DepthOrArraySize = 1;
-		textureDesc.MipLevels = 1;
+		textureDesc.MipLevels = 0;
 		textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		textureDesc.SampleDesc.Count = 1;
 		textureDesc.SampleDesc.Quality = 0;
@@ -107,6 +109,7 @@ namespace D3DResources
 #if NAME_D3D_RESOURCES
 		resources.textureUploadResource->SetName(L"Texture Upload Buffer");
 #endif
+		
 	}
 
 	/**
@@ -415,6 +418,25 @@ namespace D3DShaders
 	*/
 	void Compile_Shader(D3D12ShaderCompilerInfo& compilerInfo, D3D12ShaderInfo& info, IDxcBlob** blob)
 	{
+		//// Open and read the file
+		//std::ifstream shaderFile(info.filename);
+		//if (shaderFile.good() == false)
+		//{
+		//	return;
+		//}
+		//std::stringstream strStream;
+		//strStream << shaderFile.rdbuf();
+		//std::string shader = strStream.str();
+
+		//IDxcBlobEncoding* pTextBlob;
+		//compilerInfo.library->CreateBlobWithEncodingFromPinned((LPBYTE)shader.c_str(), (uint32_t)shader.size(), 0, &pTextBlob);
+
+		//IDxcOperationResult* pResult;
+		//compilerInfo.compiler->Compile(pTextBlob, info.filename, L"", info.targetProfile, nullptr, 0, nullptr, 0, nullptr, &pResult);
+
+		//HRESULT resultCode;
+		//pResult->GetStatus(&resultCode);
+
 		HRESULT hr;
 		UINT32 code(0);
 		IDxcBlobEncoding* pShaderText(nullptr);
@@ -1184,7 +1206,7 @@ namespace DXR
 
 		// Add a state subobject for the ray tracing pipeline config
 		D3D12_RAYTRACING_PIPELINE_CONFIG pipelineConfig = {};
-		pipelineConfig.MaxTraceRecursionDepth = 2;
+		pipelineConfig.MaxTraceRecursionDepth = 1;
 
 		D3D12_STATE_SUBOBJECT pipelineConfigObject = {};
 		pipelineConfigObject.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
@@ -1367,6 +1389,8 @@ namespace DXR
 		textureSRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
 		handle.ptr += handleIncrement;
+		// Upload the texture to the GPU
+		D3DResources::Upload_Texture(d3d, resources.texture, resources.textureUploadResource, resources.textureInfo);
 		d3d.device->CreateShaderResourceView(resources.texture, &textureSRVDesc, handle);
 	}
 
@@ -1511,14 +1535,14 @@ namespace Raster
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
 		D3D12_STATIC_SAMPLER_DESC sampler = {};
-		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.Filter = D3D12_FILTER_ANISOTROPIC;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
 		sampler.MipLODBias = 0;
-		sampler.MaxAnisotropy = 0;
+		sampler.MaxAnisotropy = D3D12_REQ_MAXANISOTROPY;
 		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_BLACK;
 		sampler.MinLOD = 0.0f;
 		sampler.MaxLOD = D3D12_FLOAT32_MAX;
 		sampler.ShaderRegister = 0;

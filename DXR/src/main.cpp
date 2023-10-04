@@ -1,4 +1,5 @@
 #include "RasterScene.h"
+#include "DXRScene.h"
 #include "Utils.h"
 
 int CALLBACK wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpCmdLine, _In_ int nShowCmd)
@@ -9,7 +10,7 @@ int CALLBACK wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 	ConfigInfo config;
 	Utils::Validate(Utils::ParseCommandLine(lpCmdLine, config), L"Error: failed to create window!");
 
-	auto spScene = std::make_shared<RasterScene>(config);
+	auto spScene = std::make_shared<DXRScene>(config);
 
 	MSG msg = {};
 	while (WM_QUIT != msg.message)
